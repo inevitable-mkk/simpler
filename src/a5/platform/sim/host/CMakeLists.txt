@@ -47,6 +47,7 @@ list(APPEND HOST_RUNTIME_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/device_runner.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/profiling_copy.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/runtime_c_api.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu_execution_unsupported.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/platform/shared/host/platform_compile_info.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/platform/shared/host/device_fault_monitor_binding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/platform/shared/host/chip_swimlane_collector.cpp"
@@ -156,3 +157,4 @@ if(SIMPLER_SANITIZERS)
     include("${SIMPLER_CMAKE_DIR}/sanitizers.cmake")
     simpler_apply_sanitizers(host_runtime)
 endif()
+
