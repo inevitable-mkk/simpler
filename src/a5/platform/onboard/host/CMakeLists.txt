@@ -87,6 +87,8 @@ list(APPEND HOST_RUNTIME_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/platform/shared/host/args_dump_retained_runs.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/platform/shared/host/scope_stats_retained_runs.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/comm_hccl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_request_state.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_request_validation.cpp"
 )
 # Add common/aicpu_loader/host sources (LoadAicpuOp)
 list(APPEND HOST_RUNTIME_SOURCES
@@ -274,3 +276,4 @@ if(SIMPLER_SANITIZERS)
     include("${SIMPLER_CMAKE_DIR}/sanitizers.cmake")
     simpler_apply_sanitizers(host_runtime)
 endif()
+
