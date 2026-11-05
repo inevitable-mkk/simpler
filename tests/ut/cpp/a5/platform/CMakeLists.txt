@@ -22,6 +22,17 @@ macro(a5_platform_case src)
         LABEL no_hardware ${ARGN})
 endmacro()
 
+a5_platform_case(test_ccu_execution_abi.cpp
+    INCLUDES ${SIMPLER_SRC}/a5/platform/include)
+
+a5_platform_case(test_ccu_request_state.cpp
+    SOURCES ${SIMPLER_SRC}/a5/platform/onboard/host/ccu/ccu_request_state.cpp
+    INCLUDES ${SIMPLER_SRC}/a5/platform/include)
+
+a5_platform_case(test_ccu_request_validation.cpp
+    SOURCES ${SIMPLER_SRC}/a5/platform/onboard/host/ccu/ccu_request_validation.cpp
+    INCLUDES ${SIMPLER_SRC}/a5/platform/include)
+
 # Host logger silent/off behavior — no runtime deps, just compile the same
 # self-contained host logger sources used by production consumers. It carries no
 # arch token: the logger is arch-agnostic and this is where the case happens to
@@ -92,3 +103,4 @@ foreach(runtime ${SIMPLER_RUNTIMES})
 endforeach()
 
 simpler_ut_glob_cases(a5_platform_case)
+
