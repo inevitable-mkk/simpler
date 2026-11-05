@@ -11,9 +11,7 @@
 namespace {
 constexpr uint32_t kPhaseBind = 1;
 constexpr uint32_t kPhasePrepare = 2;
-constexpr uint32_t kPhaseArmed = 3;
 constexpr uint32_t kPhaseCancel = 4;
-constexpr uint32_t kPhaseRetired = 5;
 
 void SetResult(CcuHostResultV1 *out, int status, CcuStageV1 stage, const char *message,
                uint64_t expected = 0, uint64_t observed = 0, bool retained = false) {
@@ -155,7 +153,8 @@ extern "C" int ccu_window_register(CcuContextId id, const CcuWindowImportV1 *inp
     }
 }
 
-extern "C" int ccu_bind_windows(CcuContextId id, const CcuWindowBindingV1 *binding, CcuHostResultV1 *result) {
+extern "C" int ccu_bind_windows(CcuContextId id, const CcuWindowBindingV1 *binding,
+                                  CcuHostResultV1 *result) try {
     auto ctx = CcuExecutionRegistryV1::Instance().GetContext(id);
     if (!ctx) return Fail(result, CCU_STATUS_STALE_HANDLE, CCU_STAGE_BIND, "Unknown context handle");
     if (binding == nullptr || binding->abi_version != CCU_EXECUTION_ABI_V1 || binding->struct_size != sizeof(*binding) ||
@@ -206,10 +205,12 @@ extern "C" int ccu_bind_windows(CcuContextId id, const CcuWindowBindingV1 *bindi
     ctx->bound = true;
     SetResult(result, CCU_STATUS_SUCCESS, CCU_STAGE_BIND, "Peer window metadata exchanged; HCOMM registration pending");
     return CCU_STATUS_SUCCESS;
+} catch (...) {
+    return Fail(result, CCU_STATUS_INTERNAL_ERROR, CCU_STAGE_BIND, "Unexpected bind failure");
 }
 
 extern "C" int ccu_prepare(CcuContextId id, const CcuRequestSpecV1 *spec, CcuRequestId *request_out,
-                            CcuHostResultV1 *result) {
+                            CcuHostResultV1 *result) try {
     if (request_out != nullptr) *request_out = 0;
     auto ctx = CcuExecutionRegistryV1::Instance().GetContext(id);
     if (!ctx) return Fail(result, CCU_STATUS_STALE_HANDLE, CCU_STAGE_PREPARE, "Unknown context handle");
@@ -269,6 +270,9 @@ extern "C" int ccu_prepare(CcuContextId id, const CcuRequestSpecV1 *spec, CcuReq
     SetResult(result, CCU_STATUS_SUCCESS, CCU_STAGE_PREPARE, "Request prepared; HCOMM program registration pending",
               d.request_seq);
     return CCU_STATUS_SUCCESS;
+} catch (...) {
+    if (request_out != nullptr) *request_out = 0;
+    return Fail(result, CCU_STATUS_INTERNAL_ERROR, CCU_STAGE_PREPARE, "Unexpected request preparation failure");
 }
 
 extern "C" int ccu_arm(CcuRequestId id, CcuTriggerInfoV1 *trigger_out, CcuHostResultV1 *result) {
@@ -328,7 +332,7 @@ extern "C" int ccu_retire(CcuRequestId id, uint32_t, CcuHostResultV1 *result) {
     return Unsupported(result, CCU_STAGE_RETIRE, "Retire requires verified stream drain and completion Store");
 }
 
-extern "C" int ccu_context_close(CcuContextId id, uint32_t, CcuHostResultV1 *result) {
+extern "C" int ccu_context_close(CcuContextId id, uint32_t, CcuHostResultV1 *result) try {
     auto ctx = CcuExecutionRegistryV1::Instance().GetContext(id);
     if (!ctx) return Fail(result, CCU_STATUS_STALE_HANDLE, CCU_STAGE_CLOSE, "Unknown context handle");
     std::lock_guard<std::mutex> lock(ctx->mutex);
@@ -349,5 +353,7 @@ extern "C" int ccu_context_close(CcuContextId id, uint32_t, CcuHostResultV1 *res
     CcuExecutionRegistryV1::Instance().RemoveContext(id);
     SetResult(result, CCU_STATUS_SUCCESS, CCU_STAGE_CLOSE, "Host owners released");
     return CCU_STATUS_SUCCESS;
+} catch (...) {
+    return Fail(result, CCU_STATUS_INTERNAL_ERROR, CCU_STAGE_CLOSE, "Unexpected context close failure");
 }
 
