@@ -98,4 +98,3 @@ static_assert(std::is_trivially_copyable_v<CcuCompletionRecordV1>);
 #endif
 
 #undef CCU_ALIGNAS
-

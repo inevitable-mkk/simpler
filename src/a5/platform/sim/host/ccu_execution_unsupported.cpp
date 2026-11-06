@@ -54,4 +54,3 @@ extern "C" int ccu_wait(CcuRequestId, uint32_t, CcuHostResultV1 *r) { return uns
 extern "C" int ccu_cancel_prepared(CcuRequestId, CcuHostResultV1 *r) { return unsupported(r, CCU_STAGE_CANCEL); }
 extern "C" int ccu_retire(CcuRequestId, uint32_t, CcuHostResultV1 *r) { return unsupported(r, CCU_STAGE_RETIRE); }
 extern "C" int ccu_context_close(CcuContextId, uint32_t, CcuHostResultV1 *r) { return unsupported(r, CCU_STAGE_CLOSE); }
-

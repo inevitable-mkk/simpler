@@ -157,4 +157,3 @@ if(SIMPLER_SANITIZERS)
     include("${SIMPLER_CMAKE_DIR}/sanitizers.cmake")
     simpler_apply_sanitizers(host_runtime)
 endif()
-

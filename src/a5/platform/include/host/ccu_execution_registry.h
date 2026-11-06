@@ -1,4 +1,13 @@
-/* Copyright (c) PyPTO Contributors. */
+/*
+ * Copyright (c) PyPTO Contributors.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ * -----------------------------------------------------------------------------------------------------------
+ */
 #pragma once
 
 #include <array>
@@ -9,6 +18,7 @@
 #include <vector>
 
 #include "host/ccu_execution.h"
+#include "host/ccu_device.h"
 #include "host/ccu_request_state.h"
 #include "host/ccu_request_validation.h"
 
@@ -25,6 +35,7 @@ struct CcuWindowLeaseV1 {
     CcuWindowId id{};
     CcuWindowImportV1 import{};
     CcuOwnerLeaseV1 owner;
+    uint64_t token{};
 };
 
 struct CcuPeerWindowV1 {
@@ -35,6 +46,8 @@ struct CcuPeerWindowV1 {
     uint64_t window_offset{};
     uint64_t window_size{};
     int32_t device_id{};
+    uint32_t reserved{};
+    uint64_t token{};
 };
 
 struct CcuRequestEntryV1 {
@@ -44,6 +57,13 @@ struct CcuRequestEntryV1 {
     CcuWindowId input_id{};
     CcuWindowId output_id{};
     std::array<uint64_t, 8> task_args{};
+    bool launch_attempted{};
+    CcuSubmissionV1 submission{CcuSubmissionV1::NOT_SUBMITTED};
+    bool trigger_attempted{};
+    CcuSubmissionV1 trigger_submission{CcuSubmissionV1::NOT_SUBMITTED};
+    uint64_t observed{};
+    bool data_ready{};
+    bool drained{};
 };
 
 struct CcuContextEntryV1 {
@@ -58,12 +78,18 @@ struct CcuContextEntryV1 {
     bool bound{};
     bool closing{};
     bool retained{};
+    bool busy{};
+    bool ready{};
+    std::shared_ptr<CcuDevice> device;
+    std::string trigger_path;
     uint64_t next_sequence{1};
     uint64_t binding_generation{};
     std::unordered_map<CcuWindowId, std::shared_ptr<CcuWindowLeaseV1>> windows;
     CcuWindowId input_id{};
     CcuWindowId output_id{};
     std::array<CcuPeerWindowV1, 2> peer_windows{};
+    std::array<CcuPeerWindowV1, 2> peer_inputs{};
+    std::array<uint64_t, 2> peer_contexts{}, peer_generations{};
     std::shared_ptr<CcuRequestEntryV1> request;
 };
 
@@ -84,4 +110,3 @@ private:
     std::unordered_map<CcuContextId, std::shared_ptr<CcuContextEntryV1>> contexts_;
     std::unordered_map<CcuRequestId, std::shared_ptr<CcuRequestEntryV1>> requests_;
 };
-

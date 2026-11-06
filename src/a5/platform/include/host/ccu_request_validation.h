@@ -26,4 +26,3 @@ CcuRequestValidationError ccu_validate_window_ranges_v1(const CcuRequestDescript
                                                          const CcuWindowRangeV1 &output);
 CcuRequestValidationError ccu_validate_trigger_v1(const CcuTriggerInfoV1 &trigger);
 CcuRequestValidationError ccu_validate_completion_header_v1(const CcuCompletionRecordV1 &record);
-

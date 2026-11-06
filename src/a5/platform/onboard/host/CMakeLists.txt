@@ -91,6 +91,10 @@ list(APPEND HOST_RUNTIME_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_request_validation.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_execution_registry.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_execution_api.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_device.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_session.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_session_sdk.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_service_program.cpp"
 )
 # Add common/aicpu_loader/host sources (LoadAicpuOp)
 list(APPEND HOST_RUNTIME_SOURCES
@@ -122,6 +126,11 @@ list(LENGTH HOST_RUNTIME_SOURCES NUM_HOST_RUNTIME_SOURCES)
 message(STATUS "Host runtime: ${NUM_HOST_RUNTIME_SOURCES} source files")
 message(VERBOSE "Host runtime sources: ${HOST_RUNTIME_SOURCES}")
 add_library(host_runtime SHARED ${HOST_RUNTIME_SOURCES})
+include("${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_trigger.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/ccu/ccu_build_config.cmake")
+target_include_directories(host_runtime PRIVATE "${CCU_GENERATED_INCLUDE_DIR}")
+target_link_libraries(host_runtime PRIVATE OpenSSL::Crypto)
+add_dependencies(host_runtime ccu_trigger)
 include("${SIMPLER_CMAKE_DIR}/aicpu_topology_driver.cmake")
 simpler_configure_aicpu_topology_driver(host_runtime)
 include("${SIMPLER_CMAKE_DIR}/profiling_config.cmake")
@@ -192,6 +201,9 @@ target_include_directories(host_runtime
         ${CMAKE_CUSTOM_INCLUDE_DIRS}
     PRIVATE
         ${ASCEND_HOME_PATH}/include
+        ${ASCEND_HOME_PATH}/include/hcomm/ccu
+        ${ASCEND_HOME_PATH}/include/hccl
+        ${ASCEND_HOME_PATH}/pkg_inc/hcomm/ccu
         ${ASCEND_HOME_PATH}/pkg_inc
         ${ASCEND_HOME_PATH}/pkg_inc/runtime
         # pkg_inc/runtime/runtime exposes rts_kernel.h + kernel.h (CANN 7.0+
@@ -278,4 +290,3 @@ if(SIMPLER_SANITIZERS)
     include("${SIMPLER_CMAKE_DIR}/sanitizers.cmake")
     simpler_apply_sanitizers(host_runtime)
 endif()
-

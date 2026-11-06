@@ -163,4 +163,3 @@ int ccu_context_close(CcuContextId context, uint32_t timeout_ms, CcuHostResultV1
 #ifdef __cplusplus
 }
 #endif
-

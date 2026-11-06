@@ -1,6 +1,17 @@
+/*
+ * Copyright (c) PyPTO Contributors.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ * -----------------------------------------------------------------------------------------------------------
+ */
 #include "host/ccu_request_state.h"
 
 CcuStateResultV1 CcuRequestStateV1::RetainLocked(bool poison) {
+    if (phase_ != CcuRequestPhaseV1::RETAINED) retained_from_ = phase_;
     phase_ = CcuRequestPhaseV1::RETAINED;
     poisoned_ = poisoned_ || poison;
     return CcuStateResultV1::RETAINED;
@@ -10,7 +21,8 @@ CcuStateResultV1 CcuRequestStateV1::Prepare(uint64_t sequence) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (poisoned_ || phase_ == CcuRequestPhaseV1::RETAINED) return CcuStateResultV1::RETAINED;
     if (phase_ != CcuRequestPhaseV1::IDLE && phase_ != CcuRequestPhaseV1::RETIRED &&
-        phase_ != CcuRequestPhaseV1::CANCELLED) return CcuStateResultV1::BUSY;
+        phase_ != CcuRequestPhaseV1::CANCELLED)
+        return CcuStateResultV1::BUSY;
     if (sequence == 0 || sequence <= last_sequence_) return CcuStateResultV1::STALE_SEQUENCE;
     last_sequence_ = active_sequence_ = sequence;
     data_ready_ = trigger_drained_ = ccu_drained_ = false;
@@ -92,9 +104,16 @@ CcuStateResultV1 CcuRequestStateV1::RetainPending() {
     return RetainLocked(false);
 }
 
+CcuStateResultV1 CcuRequestStateV1::RetainFault() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return RetainLocked(true);
+}
+
 CcuStateResultV1 CcuRequestStateV1::CancelPrepared(bool peers_cancelled) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (phase_ != CcuRequestPhaseV1::PREPARED) return CcuStateResultV1::INVALID_STATE;
+    if (phase_ != CcuRequestPhaseV1::PREPARED &&
+        !(phase_ == CcuRequestPhaseV1::RETAINED && retained_from_ == CcuRequestPhaseV1::PREPARED && !poisoned_))
+        return CcuStateResultV1::INVALID_STATE;
     if (!peers_cancelled) return RetainLocked(false);
     active_sequence_ = 0;
     phase_ = CcuRequestPhaseV1::CANCELLED;
@@ -103,7 +122,10 @@ CcuStateResultV1 CcuRequestStateV1::CancelPrepared(bool peers_cancelled) {
 
 CcuStateResultV1 CcuRequestStateV1::BeginRetire() {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (phase_ != CcuRequestPhaseV1::DRAINED) return CcuStateResultV1::INVALID_STATE;
+    if (phase_ != CcuRequestPhaseV1::DRAINED &&
+        !(phase_ == CcuRequestPhaseV1::RETAINED && retained_from_ == CcuRequestPhaseV1::RETIRING && !poisoned_ &&
+          data_ready_ && trigger_drained_ && ccu_drained_))
+        return CcuStateResultV1::INVALID_STATE;
     phase_ = CcuRequestPhaseV1::RETIRING;
     return CcuStateResultV1::OK;
 }
@@ -117,8 +139,8 @@ CcuStateResultV1 CcuRequestStateV1::FinishRetire(bool peers_retired) {
     return CcuStateResultV1::OK;
 }
 
-CcuStateResultV1 CcuRequestStateV1::RecoverDrained(uint64_t completed_sequence, bool trigger_stream_drained,
-                                                    bool ccu_stream_drained) {
+CcuStateResultV1
+CcuRequestStateV1::RecoverDrained(uint64_t completed_sequence, bool trigger_stream_drained, bool ccu_stream_drained) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (phase_ != CcuRequestPhaseV1::RETAINED) return CcuStateResultV1::INVALID_STATE;
     if (poisoned_ || completed_sequence != active_sequence_ || !trigger_stream_drained || !ccu_stream_drained)
@@ -143,7 +165,15 @@ CcuStateResultV1 CcuRequestStateV1::Close(bool quiescence_proven) {
     return CcuStateResultV1::RETAINED;
 }
 
-CcuRequestPhaseV1 CcuRequestStateV1::Phase() const { std::lock_guard<std::mutex> lock(mutex_); return phase_; }
-uint64_t CcuRequestStateV1::Sequence() const { std::lock_guard<std::mutex> lock(mutex_); return active_sequence_; }
-bool CcuRequestStateV1::Poisoned() const { std::lock_guard<std::mutex> lock(mutex_); return poisoned_; }
-
+CcuRequestPhaseV1 CcuRequestStateV1::Phase() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return phase_;
+}
+uint64_t CcuRequestStateV1::Sequence() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return active_sequence_;
+}
+bool CcuRequestStateV1::Poisoned() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return poisoned_;
+}
